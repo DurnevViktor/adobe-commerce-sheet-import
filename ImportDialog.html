@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+  </head>
+  <body>
+    <div>
+      <label>Domain:</label>
+      <input type="text" id="domain" style="width:100%;">
+    </div>
+    <div>
+      <label>Access Token:</label>
+      <input type="text" id="token" style="width:100%;">
+    </div>
+    <div style="margin-top:10px;">
+      <button onclick="importProducts()">Import</button>
+      <button onclick="google.script.host.close()">Cancel</button>
+    </div>
+    <script>
+      function importProducts() {
+        var domain = document.getElementById('domain').value.trim();
+        var token = document.getElementById('token').value.trim();
+        if (!domain || !token) {
+          alert('Please enter domain and access token');
+          return;
+        }
+        google.script.run.withSuccessHandler(function() {
+          alert('Products import started');
+          google.script.host.close();
+        }).withFailureHandler(function(error) {
+          alert('Error: ' + error.message);
+        }).processImport(domain, token);
+      }
+    </script>
+  </body>
+</html>
