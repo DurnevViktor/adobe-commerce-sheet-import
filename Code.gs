@@ -27,7 +27,104 @@ function showImportDialog() {
  * @param {string} domain The base domain of the Adobe Commerce store (e.g. "myshop.com").
  * @param {string} token  The Bearer token used for authenticating the API requests.
  */
+/**
+ * Fetches all products from Adobe Commerce using the REST API.
+ * Products are retrieved in pages of `pageSize` items until no more results are returned.
+ *
+ * @param {string} domain The base domain of the Adobe Commerce store (e.g. "myshop.com").
+ * @param {string} token  The Bearer token used for authenticating the API requests.
+ * @return {Array<Object>} An array of product objects returned by the API.
+ */
+function fetchAllProducts(domain, token) {
+  var pageSize = 100;
+  var page = 1;
+  var allItems = [];
+  var slash = String.fromCharCode(47); // avoid writing '/' directly in Apps Script editor
+  while (true) {
+    var url =
+      'https://' +
+      domain +
+      slash +
+      'rest' +
+      slash +
+      'V1' +
+      slash +
+      'products?searchCriteria[currentPage]=' +
+      page +
+      '&searchCriteria[pageSize]=' +
+      pageSize;
+    var options = {
+      method: 'get',
+      headers: {
+        Authorization: 'Bearer ' + token,
+      },
+      muteHttpExceptions: true,
+    };
+    var response = UrlFetchApp.fetch(url, options);
+    var data = JSON.parse(response.getContentText());
+    if (data && data.items && data.items.length > 0) {
+      allItems = allItems.concat(data.items);
+      if (data.items.length < pageSize) {
+        // reached the last page
+        break;
+      }
+      page++;
+    } else {
+      break;
+    }
+  }
+  return allItems;
+}
+
+/**
+ * Imports products from Adobe Commerce into the "Catalog" sheet.
+ * Fetches all products via the REST API and writes selected fields to the sheet.
+ * Existing data in the sheet will be cleared before writing new data.
+ *
+ * @param {string} domain The base domain of the Adobe Commerce store.
+ * @param {string} token  The Bearer token used for authenticating the API requests.
+ */
 function processImport(domain, token) {
   var ui = SpreadsheetApp.getUi();
-  ui.alert('Import started. Product import implementation will be added in a later commit.');
+  try {
+    // Retrieve all products from the API
+    var products = fetchAllProducts(domain, token);
+
+    var ss = SpreadsheetApp.getActive();
+    var catalogSheet = ss.getSheetByName('Catalog');
+    // Create the Catalog sheet if it doesn't exist
+    if (!catalogSheet) {
+      catalogSheet = ss.insertSheet('Catalog');
+    } else {
+      catalogSheet.clearContents();
+    }
+
+    // Define the columns we will write
+    var headers = ['id', 'sku', 'name', 'type_id', 'price', 'status'];
+    catalogSheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+
+    // Build the data rows
+    var rows = [];
+    for (var i = 0; i < products.length; i++) {
+      var p = products[i];
+      rows.push([
+        p.id || '',
+        p.sku || '',
+        p.name || '',
+        p.type_id || '',
+        p.price || '',
+        p.status || '',
+      ]);
+    }
+
+    // Write rows to the sheet if there are any products
+    if (rows.length > 0) {
+      catalogSheet.getRange(2, 1, rows.length, headers.length).setValues(rows);
+    }
+
+    ui.alert('Imported ' + products.length + ' products into the Catalog sheet.');
+  } catch (e) {
+    ui.alert('Error importing products: ' + e.message);
+    throw e;
+  }
 }
