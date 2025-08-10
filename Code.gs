@@ -5,6 +5,8 @@ function onOpen() {
 }
 
 function showImportDialog() {
-  // Placeholder function for import dialog
-  SpreadsheetApp.getUi().alert('Import function not implemented yet.');
+  var html = HtmlService.createHtmlOutputFromFile('ImportDialog')
+    .setWidth(400)
+    .setHeight(200);
+  SpreadsheetApp.getUi().showModalDialog(html, 'Import Products');
 }
