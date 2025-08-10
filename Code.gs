@@ -117,12 +117,45 @@ function processImport(domain, token) {
       ]);
     }
 
-    // Write rows to the sheet if there are any products
+    // Write rows to the Catalog sheet if there are any products
     if (rows.length > 0) {
       catalogSheet.getRange(2, 1, rows.length, headers.length).setValues(rows);
     }
 
-    ui.alert('Imported ' + products.length + ' products into the Catalog sheet.');
+    // Create or update the "Simple" sheet with only simple products
+    var simpleSheet = ss.getSheetByName('Simple');
+    if (!simpleSheet) {
+      simpleSheet = ss.insertSheet('Simple');
+    } else {
+      simpleSheet.clearContents();
+    }
+    // Write the same headers to the Simple sheet
+    simpleSheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+    var simpleRows = [];
+    for (var j = 0; j < products.length; j++) {
+      var prod = products[j];
+      if (prod.type_id && prod.type_id.toString().toLowerCase() === 'simple') {
+        simpleRows.push([
+          prod.id || '',
+          prod.sku || '',
+          prod.name || '',
+          prod.type_id || '',
+          prod.price || '',
+          prod.status || '',
+        ]);
+      }
+    }
+    if (simpleRows.length > 0) {
+      simpleSheet.getRange(2, 1, simpleRows.length, headers.length).setValues(simpleRows);
+    }
+
+    ui.alert(
+      'Imported ' +
+        products.length +
+        ' products into the Catalog sheet. Simple products: ' +
+        simpleRows.length +
+        '.'
+    );
   } catch (e) {
     ui.alert('Error importing products: ' + e.message);
     throw e;
